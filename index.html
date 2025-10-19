@@ -498,7 +498,7 @@
 
         <div class="score-reward-info">
             <div style="font-size: 18px; font-weight: 700; margin-bottom: 10px;">🎯 Score & Earn!</div>
-            <div>Score 15+ points to claim rewards</div>
+            <div>Score 30+ points to claim rewards</div>
             <div id="prizePoolStatus" style="margin-top: 10px; font-size: 14px; color: rgba(255, 255, 255, 0.8);">
                 💰 Checking prize pool...
             </div>
@@ -544,7 +544,7 @@
                 <div id="notEligibleReward" style="display: none;">
                     <div class="score-reward-info" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.5);">
                         <div style="font-size: 18px; font-weight: 700; color: #ef4444; margin-bottom: 10px;">🎯 Almost There!</div>
-                        <div>Score 15+ points to submit to leaderboard and earn ETH!</div>
+                        <div>Score 30+ points to submit to leaderboard and earn ETH!</div>
                     </div>
                 </div>
             </div>
@@ -602,7 +602,7 @@
         let isFarcasterEnvironment = false, userProfile = null, farcasterFID = null, appKitModal = null, ethersProvider = null;
         window.walletConfig = null; window.isWalletConnected = false; window.currentAccount = null;
 
-        const GAME_CONTRACT_ADDRESS = "0x400e38922f7ad076fe4fd2f89e850ab4325eaa64";
+        const GAME_CONTRACT_ADDRESS = "0x603b3b1a946b9ff14280e8581539e07808dc5d0d";
         const NEYNAR_API_KEY = '8BF81B8C-C491-4735-8E1C-FC491FF048D4';
         const REOWN_PROJECT_ID = 'e0dd881bad824ac3418617434a79f917';
         const GAME_CONTRACT_ABI = [
@@ -871,8 +871,8 @@
             const fid = window.getFarcasterFID();
             const score = window.gameInstance ? Math.floor(window.gameInstance.score) : 0;
 
-            if (score < 15) {
-                showSuccessMessage('❌ Score must be 15 or higher to submit!');
+            if (score < 30) {
+                showSuccessMessage('❌ Score must be 30 or higher to submit!');
                 return;
             }
 
@@ -2031,7 +2031,7 @@
             const eligibleDiv = document.getElementById('eligibleReward');
             const notEligibleDiv = document.getElementById('notEligibleReward');
             
-            if (finalScore >= 15 && window.isWalletConnected) {
+            if (finalScore >= 30 && window.isWalletConnected) {
                 eligibleDiv.style.display = 'block';
                 notEligibleDiv.style.display = 'none';
             } else {
@@ -2050,7 +2050,7 @@
                 `🎮 Just scored ${score} points in Super Jump!\n\n` +
                 `🏆 My high score: ${highScore}\n\n` +
                 `😎 Can you beat me?\n` +
-                `📣 Score 15+ to earn ETH rewards!\n` +
+                `📣 Score 30+ to earn ETH rewards!\n` +
                 `💰 Play daily and earn crypto`
             );
             

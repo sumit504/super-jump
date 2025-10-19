@@ -15,7 +15,7 @@ A thrilling vertical jumping game built on **Base blockchain** where players can
 - **High Score Tracking**: Local storage saves your best performance
 
 ### 💰 Play-to-Earn Mechanics
-- **Score 15+ Points**: Qualify for ETH rewards
+- **Score 30+ Points**: Qualify for ETH rewards
 - **Daily Claims**: Claim rewards once per day (per Farcaster FID)
 - **On-Chain Leaderboard**: Top 50 players displayed with Farcaster profiles
 - **Smart Contract Integration**: All scores and rewards verified on-chain
@@ -81,14 +81,14 @@ netlify deploy
 2. **Click "Play Game"** and confirm the transaction
 3. **Jump on platforms** to keep moving upward
 4. **Collect coins** for bonus points
-5. **Score 15+ points** to qualify for rewards
+5. **Score 30+ points** to qualify for rewards
 6. **Submit your score** to the leaderboard
 7. **Claim your ETH reward** (once per day)
 
 ### Scoring
 - **Pass Platform**: +1 point
 - **Collect Coin**: +1 point
-- **Minimum for Rewards**: 15 points
+- **Minimum for Rewards**: 30 points
 
 ## 🔧 Configuration
 
@@ -220,12 +220,12 @@ Update the meta tag with your deployment URL:
 ## 💎 Reward System
 
 ### Eligibility
-- Score **15+ points** in a single game
+- Score **30+ points** in a single game
 - Connect wallet (Farcaster or Reown)
 - Have remaining daily claims
 
 ### Claim Process
-1. Complete game with 15+ points
+1. Complete game with 30+ points
 2. Click "Submit to Leaderboard" (optional)
 3. Click "Claim ETH Reward"
 4. Confirm transaction
