@@ -1,0 +1,28 @@
+{
+  "frame": {
+    "name": "Super Jump",
+    "version": "1",
+    "iconUrl": "https://super-jump-sand.vercel.app/icon.png",
+    "homeUrl": "https://super-jump-sand.vercel.app",
+    "imageUrl": "https://super-jump-sand.vercel.app/image.png",
+    "splashImageUrl": "https://super-jump-sand.vercel.app/splash.png",
+    "splashBackgroundColor": "#00111a",
+    "webhookUrl": "https://super-jump-sand.vercel.app/api/webhook",
+    "subtitle": "Play Super Jump and earn",
+    "description": "Play Super Jump and Earn",
+    "primaryCategory": "games",
+    "tags": [
+      "superjump",
+      "super-jump",
+      "jumpgame"
+    ]
+  },
+  "accountAssociation": {
+    "header": "eyJmaWQiOjIzOTA3NywidHlwZSI6ImF1dGgiLCJrZXkiOiIweDY1NmJFMzg1Nzg0NjY0YzU4MkIxMjk3MUY3NmM4NTE4M2IyMjk1ZTEifQ",
+    "payload": "eyJkb21haW4iOiJzdXBlci1qdW1wLXNhbmQudmVyY2VsLmFwcCJ9",
+    "signature": "S7X8LrIdxk+XZlZHOm/a312Hu3RVf4wmUro4bABxrax+pTX5ReEv2+DWJtcQBO5EX7HHZkoLy+FLuCgOiyd0kBs="
+  },
+  "baseBuilder": {
+    "ownerAddress": "0x3D6Ba0053e7c1B2c36FFc8748a5567bA8AbF8694"
+  }
+}
