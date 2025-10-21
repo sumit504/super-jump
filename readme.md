@@ -12,7 +12,6 @@ A thrilling vertical jumping game built on **Base blockchain** where players can
 - **Dynamic Backgrounds**: Beautiful gradient backgrounds that change with altitude
 - **Particle Effects**: Smooth jump particles and visual feedback
 - **Score System**: Points earned by passing platforms and collecting coins
-- **High Score Tracking**: Local storage saves your best performance
 
 ### 💰 Play-to-Earn Mechanics
 - **Score 30+ Points**: Qualify for ETH rewards
