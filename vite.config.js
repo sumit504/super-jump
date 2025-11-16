@@ -12,8 +12,11 @@ export default defineConfig({
           'vendor-farcaster': ['@farcaster/frame-sdk']
         }
       }
-    }
+    },
+    // Copy game.js and other assets
+    copyPublicDir: true
   },
+  publicDir: 'public',
   server: {
     port: 3000,
     open: true
