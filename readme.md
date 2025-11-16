@@ -1,314 +1,248 @@
-# 🎮 Super Jump - Play to Earn Game
+# 🎮 Super Jump - Farcaster Mini App
 
-A thrilling vertical jumping game built on **Base blockchain** where players can earn ETH rewards by achieving high scores. Features dual wallet support for both Farcaster Mini Apps and standalone web deployment.
-
-![Super Jump](https://super-jump-sand.vercel.app/image.png)
+A blockchain-powered jumping game built for Farcaster with Base network integration and ETH rewards.
 
 ## 🌟 Features
 
-### 🎯 Gameplay
-- **Endless Vertical Jumping**: Jump from platform to platform and reach new heights
-- **Coin Collection**: Collect coins mid-air for bonus points
-- **Dynamic Backgrounds**: Beautiful gradient backgrounds that change with altitude
-- **Particle Effects**: Smooth jump particles and visual feedback
-- **Score System**: Points earned by passing platforms and collecting coins
+- 🎯 **Fun Gameplay** - Jump on platforms, collect coins, beat high scores
+- 💰 **ETH Rewards** - Score 30+ points to earn real ETH rewards
+- 🏆 **On-Chain Leaderboard** - Compete with players globally
+- 🔗 **Wallet Integration** - Connect with MetaMask, Rainbow, Coinbase Wallet
+- 📱 **Farcaster Native** - Seamlessly integrates with Farcaster frames
+- ⚡ **Base Network** - Fast and cheap transactions on Base L2
 
-### 💰 Play-to-Earn Mechanics
-- **Score 30+ Points**: Qualify for ETH rewards
-- **Daily Claims**: Claim rewards once per day (per Farcaster FID)
-- **On-Chain Leaderboard**: Top 50 players displayed with Farcaster profiles
-- **Smart Contract Integration**: All scores and rewards verified on-chain
-- **Prize Pool Status**: Real-time display of available rewards
-
-### 🔗 Dual Wallet Support
-- **Farcaster Mini App**: Seamless integration with Farcaster frames
-- **Standalone Web**: Works on any website with Reown (WalletConnect)
-- **Multi-Wallet Compatible**: Coinbase Wallet, MetaMask, Rainbow, and more
-- **Auto-Detection**: Automatically uses the right wallet connector
-
-### 🎨 UI/UX Features
-- **Responsive Design**: Works on mobile and desktop
-- **Profile Integration**: Displays Farcaster profile pictures and usernames
-- **Live Leaderboard**: View top 50 players with their scores
-- **Share Functionality**: Share your score directly to Farcaster
-- **Sound Effects**: Audio feedback for jumps, coins, and game over
+---
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 16+ (for local development)
-- MetaMask or Coinbase Wallet
-- ETH on Base network (for gas fees)
+
+- Node.js 18+ ([Download](https://nodejs.org/))
+- A Web3 wallet (MetaMask, Rainbow, etc.)
+- Some ETH on Base network for gas fees
 
 ### Installation
 
-1. **Clone the repository**
 ```bash
-git clone https://github.com/yourusername/super-jump.git
+# 1. Download/clone the project
 cd super-jump
+
+# 2. Install dependencies
+npm install
+
+# 3. Start development server
+npm run dev
 ```
 
-2. **No build required!** This is a standalone HTML file
-```bash
-# Just open the HTML file in your browser
-open index.html
-```
+The game will open automatically at `http://localhost:3000`
 
-3. **Or deploy to Vercel/Netlify**
-```bash
-# Deploy to Vercel
-vercel deploy
-
-# Or to Netlify
-netlify deploy
-```
+---
 
 ## 🎮 How to Play
 
-### Controls
-- **Desktop**: 
-  - Click **LEFT** side of screen to move left
-  - Click **RIGHT** side of screen to move right
-  - Or use **A/D** or **Arrow Keys**
-  
-- **Mobile**: 
-  - Tap **LEFT** side to move left
-  - Tap **RIGHT** side to move right
+1. **Connect Wallet** - Click "Connect Wallet" and choose your wallet
+2. **Start Game** - Click "Play Game" and confirm transaction
+3. **Controls**:
+   - **Desktop**: Click left/right OR use A/D keys
+   - **Mobile**: Tap left/right sides
+4. **Score 30+** points to earn ETH rewards!
 
-### Objective
-1. **Connect your wallet** (Farcaster or Reown)
-2. **Click "Play Game"** and confirm the transaction
-3. **Jump on platforms** to keep moving upward
-4. **Collect coins** for bonus points
-5. **Score 30+ points** to qualify for rewards
-6. **Submit your score** to the leaderboard
-7. **Claim your ETH reward** (once per day)
-
-### Scoring
-- **Pass Platform**: +1 point
-- **Collect Coin**: +1 point
-- **Minimum for Rewards**: 30 points
-
-## 🔧 Configuration
-
-### Smart Contract
-Located at: `0x400e38922f7ad076fe4fd2f89e850ab4325eaa64` on **Base Mainnet**
-
-### API Keys (Update in code)
-```javascript
-const NEYNAR_API_KEY = 'YOUR_NEYNAR_API_KEY';
-const REOWN_PROJECT_ID = 'YOUR_REOWN_PROJECT_ID';
-```
-
-### Contract Functions
-- `startGame(farcasterFID)`: Initialize a new game session
-- `submitScore(score, farcasterFID)`: Submit score to leaderboard
-- `claimReward(score, gameNonce, timestamp, farcasterFID, proof)`: Claim ETH reward
-- `getTopPlayers(count)`: Fetch leaderboard data
-- `getRemainingClaimsForFID(fid)`: Check if FID can claim today
-
-## 🏗️ Technical Architecture
-
-### Frontend
-- **Pure HTML/CSS/JS**: No build tools required
-- **Canvas API**: Smooth 60 FPS gameplay
-- **Web Audio API**: Dynamic sound effects
-- **LocalStorage**: High score persistence
-
-### Blockchain Integration
-- **Farcaster Path**: 
-  - `@farcaster/miniapp-sdk` for profile data
-  - `@farcaster/miniapp-wagmi-connector` for wallet
-  - `@wagmi/core` for contract interactions
-
-- **Standalone Path**:
-  - `@reown/appkit` for wallet connection
-  - `ethers.js` v6 for contract calls
-  - Works with any WalletConnect-compatible wallet
-
-### Smart Contract (Solidity)
-- **Network**: Base (Chain ID: 8453)
-- **Reward Amount**: ~0.000008 ETH per claim
-- **Daily Limit**: 1 claim per Farcaster FID per day
-- **Leaderboard**: Stores top scores with player addresses
+---
 
 ## 📁 Project Structure
 
 ```
 super-jump/
-├── index.html              # Main game file (all-in-one)
-├── README.md              # This file
-├── image.png              # Game thumbnail
-├── splash.png             # Farcaster splash screen
-└── sounds/                # Optional sound files
-    ├── correct.mp3
-    ├── wrong.mp3
-    └── win.mp3
+├── index.html           # Main HTML
+├── main.js             # Wallet & blockchain
+├── game.js             # Game engine
+├── package.json        # Dependencies
+├── vite.config.js      # Build config
+└── README.md           # This file
 ```
 
-## 🎨 Game Classes
+---
 
-### Core Classes
-- **`Game`**: Main game loop and state management
-- **`Player`**: Player physics and rendering
-- **`Platform`**: Platform generation and collision
-- **`Coin`**: Collectible coins with animations
-- **`Camera`**: Smooth follow camera system
-- **`ParticleSystem`**: Visual effects on jumps
-- **`BackgroundManager`**: Dynamic background gradients
-- **`AudioManager`**: Sound effect generation
+## 🛠️ Development Commands
 
-## 🔐 Security Features
+```bash
+npm run dev      # Start dev server
+npm run build    # Build for production
+npm run preview  # Preview build
+```
 
-- **On-chain verification**: All scores verified by smart contract
-- **Anti-cheat**: Game start requires transaction confirmation
-- **Daily limits**: Prevents reward farming
-- **Farcaster proof**: Links rewards to Farcaster identity
+---
+
+## 🔗 Smart Contract
+
+**Network**: Base Mainnet  
+**Address**: `0x603b3b1a946b9ff14280e8581539e07808dc5d0d`
+
+### Functions
+- `startGame()` - Start new session
+- `submitScore()` - Submit to leaderboard
+- `claimReward()` - Claim ETH
+- `getTopPlayers()` - Get leaderboard
+
+---
 
 ## 🌐 Deployment
 
 ### Vercel (Recommended)
 ```bash
+npm i -g vercel
+npm run build
 vercel --prod
 ```
 
 ### Netlify
 ```bash
-netlify deploy --prod
+npm run build
+# Upload dist/ folder
 ```
-
-### GitHub Pages
-```bash
-git push origin main
-# Enable GitHub Pages in repository settings
-```
-
-### Farcaster Frame
-Update the meta tag with your deployment URL:
-```html
-<meta name="fc:miniapp" content='{
-    "version":"1",
-    "imageUrl":"YOUR_URL/image.png",
-    "button":{
-        "title":"Play Super Jump & Earn!",
-        "action":{
-            "type":"launch_frame",
-            "name":"Super Jump",
-            "url":"YOUR_DEPLOYMENT_URL",
-            "splashImageUrl":"YOUR_URL/splash.png",
-            "splashBackgroundColor":"#00111a"
-        }
-    }
-}' />
-```
-
-## 📊 Leaderboard System
-
-### Features
-- **Top 50 Players**: Displays best scores from all players
-- **Best Score Only**: Shows each player's highest score
-- **Farcaster Integration**: Fetches profile pictures and usernames
-- **Real-time Updates**: Refreshes after score submission
-- **Rank Badges**: 🥇🥈🥉 for top 3 players
-
-### Data Source
-- Fetched from smart contract `getTopPlayers(50)`
-- Player profiles from Neynar API
-- Sorted by score (highest first)
-
-## 💎 Reward System
-
-### Eligibility
-- Score **30+ points** in a single game
-- Connect wallet (Farcaster or Reown)
-- Have remaining daily claims
-
-### Claim Process
-1. Complete game with 30+ points
-2. Click "Submit to Leaderboard" (optional)
-3. Click "Claim ETH Reward"
-4. Confirm transaction
-5. Receive ETH to your wallet
-
-### Limits
-- **1 claim per day** per Farcaster FID
-- Resets at midnight UTC
-- Contract must have sufficient balance
-
-## 🐛 Troubleshooting
-
-### Wallet Won't Connect
-- Ensure you're on Base network
-- Try refreshing the page
-- Clear browser cache
-- Use Coinbase Wallet or MetaMask
-
-### Transaction Failed
-- Check you have ETH for gas on Base
-- Ensure game was started with transaction
-- Verify you haven't claimed today
-
-### Leaderboard Not Loading
-- Check internet connection
-- Verify smart contract is accessible
-- Try refreshing the page
-
-### Game Lags
-- Close other browser tabs
-- Reduce browser extensions
-- Use Chrome/Brave for best performance
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🔗 Links
-
-- **Live Game**: [https://celio-jump.vercel.app](https://celio-jump.vercel.app)
-- **Smart Contract**: [BaseScan](https://basescan.org/address/0x400e38922f7ad076fe4fd2f89e850ab4325eaa64)
-- **Farcaster**: [Launch in Farcaster](https://warpcast.com/)
-- **Documentation**: [Game Docs](https://docs.yoursite.com)
-
-## 👥 Team
-
-- **Developer**: Your Name
-- **Smart Contracts**: Your Team
-- **Design**: Your Designer
-
-## 🙏 Acknowledgments
-
-- **Farcaster** - For the amazing mini app SDK
-- **Reown** - For WalletConnect integration
-- **Base** - For the L2 blockchain platform
-- **Neynar** - For Farcaster API services
-
-## 📈 Roadmap
-
-- [ ] Power-ups and special platforms
-- [ ] Multiplayer racing mode
-- [ ] NFT character skins
-- [ ] Tournament system
-- [ ] Mobile app version
-- [ ] More reward tiers
-
-## 💬 Support
-
-- **Discord**: [Join our community](https://discord.gg/yourserver)
-- **Twitter**: [@YourGame](https://twitter.com/yourgame)
-- **Email**: support@yourgame.com
 
 ---
 
-**Made with ❤️ on Base blockchain**
+## 💰 Rewards System
 
-Play now and start earning! 🚀
+- **Minimum Score**: 30 points
+- **Requirement**: Farcaster account
+- **Limit**: One claim per day per FID
+- **Amount**: ~0.00000851 ETH per claim
+
+---
+
+## 🐛 Troubleshooting
+
+### npm install fails
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### Port 3000 in use
+```bash
+npm run dev -- --port 3001
+```
+
+### Wallet not connecting
+1. Install wallet extension
+2. Switch to Base network
+3. Refresh page
+4. Check console (F12)
+
+### Vite config error
+Replace `vite.config.js` with:
+```javascript
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  server: {
+    port: 3000,
+    open: true
+  }
+});
+```
+
+---
+
+## 📱 Farcaster Integration
+
+Frame metadata included for easy sharing on Farcaster. Update URLs after deployment.
+
+---
+
+## 🔐 Security
+
+- ✅ No private keys stored
+- ✅ Secure wallet connections
+- ✅ Verified smart contract
+- ✅ Open source
+
+**Never share your seed phrase!**
+
+---
+
+## 📚 Documentation
+
+- **QUICKSTART.md** - Step-by-step setup
+- **CHANGES.md** - ESM to local imports migration
+- **PROJECT_OVERVIEW.md** - Complete overview
+- **INSTALL_NOW.txt** - Quick install guide
+
+---
+
+## 🎓 Tech Stack
+
+- **Build**: Vite
+- **Blockchain**: Ethers.js v6
+- **Wallet**: Reown AppKit
+- **Network**: Base (L2)
+- **Integration**: Farcaster Frame SDK
+
+---
+
+## 🤝 Contributing
+
+Contributions welcome! Fork, create branch, make changes, submit PR.
+
+---
+
+## 📄 License
+
+MIT License
+
+---
+
+## 🆘 Support
+
+- Check browser console (F12)
+- Verify Base network selected
+- Ensure dependencies installed
+- See documentation files
+
+### Resources
+- [Vite Docs](https://vitejs.dev/)
+- [Ethers.js](https://docs.ethers.org/)
+- [Base Network](https://docs.base.org/)
+- [Farcaster](https://docs.farcaster.xyz/)
+
+---
+
+## 🎯 Game Mechanics
+
+- **Platform Jump**: +1 point
+- **Coin Collection**: +1 point
+- **Physics**: Realistic gravity and movement
+- **Camera**: Smooth following
+- **Background**: Dynamic altitude-based changes
+
+---
+
+## 📈 Roadmap
+
+- [ ] Power-ups and obstacles
+- [ ] NFT rewards
+- [ ] Multiplayer mode
+- [ ] Mobile app
+- [ ] Tournament system
+
+---
+
+## 💡 Quick Tips
+
+1. Use `npm run dev` for development
+2. Test on Base network first
+3. Gas fees are very low on Base (~$0.01)
+4. Keep dependencies updated
+5. Check console for debug info
+
+---
+
+**Made with ❤️ for Farcaster & Base**
+
+**Happy Gaming! 🎮🚀**
+
+---
+
+*Version 1.0.0 - November 2024*
