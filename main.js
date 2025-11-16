@@ -98,6 +98,9 @@ function updateProfileUI() {
 
 async function initializeFarcasterWallet() {
     try {
+        // In Farcaster environment, also initialize Reown for wallet connection
+        await initializeReownWallet();
+        
         // For Farcaster environment, use injected provider if available
         window.walletConfig = createConfig({ 
             chains: [wagmiBase], 
@@ -237,73 +240,45 @@ window.getFarcasterFID = () => farcasterFID;
 window.connectWallet = async function() {
     try {
         console.log('Connect wallet clicked');
-        if (isFarcasterEnvironment) { 
-            // In Farcaster, use the Reown modal for now
-            await appKitModal.open();
-            
-            const checkInterval = setInterval(async () => {
-                const state = appKitModal.getState();
-                
-                if (state.open === false && !state.loading) {
-                    clearInterval(checkInterval);
-                    
-                    try {
-                        const walletProvider = appKitModal.getWalletProvider();
-                        if (walletProvider) {
-                            ethersProvider = new ethers.BrowserProvider(walletProvider);
-                            const signer = await ethersProvider.getSigner();
-                            const address = await signer.getAddress();
-                            
-                            if (address) {
-                                console.log('✅ Connected:', address);
-                                window.currentAccount = { address: address, isConnected: true };
-                                window.isWalletConnected = true;
-                                updateWalletUI({ isConnected: true, address: address });
-                            }
-                        }
-                    } catch (error) {
-                        console.log('User closed modal without connecting');
-                    }
-                }
-            }, 500);
-            
-            setTimeout(() => clearInterval(checkInterval), 10000);
+        
+        if (!appKitModal) {
+            showSuccessMessage('⏳ Initializing wallet connection...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
         }
-        else { 
-            console.log('Opening Reown modal...');
-            await appKitModal.open();
+        
+        console.log('Opening Reown modal...');
+        await appKitModal.open();
+        
+        const checkInterval = setInterval(async () => {
+            const state = appKitModal.getState();
             
-            const checkInterval = setInterval(async () => {
-                const state = appKitModal.getState();
+            if (state.open === false && !state.loading) {
+                clearInterval(checkInterval);
                 
-                if (state.open === false && !state.loading) {
-                    clearInterval(checkInterval);
-                    
-                    try {
-                        const walletProvider = appKitModal.getWalletProvider();
-                        if (walletProvider) {
-                            ethersProvider = new ethers.BrowserProvider(walletProvider);
-                            const signer = await ethersProvider.getSigner();
-                            const address = await signer.getAddress();
-                            
-                            if (address) {
-                                console.log('✅ Connected:', address);
-                                window.currentAccount = { address: address, isConnected: true };
-                                window.isWalletConnected = true;
-                                updateWalletUI({ isConnected: true, address: address });
-                            }
+                try {
+                    const walletProvider = appKitModal.getWalletProvider();
+                    if (walletProvider) {
+                        ethersProvider = new ethers.BrowserProvider(walletProvider);
+                        const signer = await ethersProvider.getSigner();
+                        const address = await signer.getAddress();
+                        
+                        if (address) {
+                            console.log('✅ Connected:', address);
+                            window.currentAccount = { address: address, isConnected: true };
+                            window.isWalletConnected = true;
+                            updateWalletUI({ isConnected: true, address: address });
                         }
-                    } catch (error) {
-                        console.log('User closed modal without connecting');
                     }
+                } catch (error) {
+                    console.log('User closed modal without connecting');
                 }
-            }, 500);
-            
-            setTimeout(() => clearInterval(checkInterval), 10000);
-        }
+            }
+        }, 500);
+        
+        setTimeout(() => clearInterval(checkInterval), 10000);
     } catch (error) { 
         console.error('Connect wallet error:', error);
-        showSuccessMessage('❌ Failed to connect wallet'); 
+        showSuccessMessage('❌ Failed to connect wallet. Please refresh and try again.'); 
     }
 };
 
