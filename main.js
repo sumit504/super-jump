@@ -288,35 +288,26 @@ window.startGameFromMenu = async function() {
         return;
     }
 
+    const playBtn = document.getElementById('playBtn');
+    playBtn.disabled = true;
+    playBtn.innerHTML = '🎮 Starting...';
+
     try {
-        const playBtn = document.getElementById('playBtn');
-        playBtn.disabled = true;
-        playBtn.innerHTML = 'Confirming... <div style="display: inline-block; border: 2px solid #fff; border-top: 2px solid transparent; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; margin-left: 10px;"></div>';
-
+        // Optional: Call startGame on contract (can be commented out for testing)
+        // Uncomment this section if you want on-chain game tracking:
+        /*
         const fid = window.getFarcasterFID();
-
-        if (isFarcasterEnvironment) { 
-            const hash = await writeContract(window.walletConfig, { 
-                address: GAME_CONTRACT_ADDRESS, 
-                abi: GAME_CONTRACT_ABI, 
-                functionName: 'startGame', 
-                args: [BigInt(fid || 0)] 
-            }); 
-            const receipt = await waitForTransactionReceipt(window.walletConfig, { hash }); 
-            if (receipt.status !== 'success') throw new Error('Transaction failed'); 
+        if (!ethersProvider) {
+            const walletProvider = appKitModal.getWalletProvider();
+            if (walletProvider) ethersProvider = new ethers.BrowserProvider(walletProvider);
         }
-        else { 
-            if (!ethersProvider) {
-                const walletProvider = appKitModal.getWalletProvider();
-                if (walletProvider) ethersProvider = new ethers.BrowserProvider(walletProvider);
-                else throw new Error('No wallet provider available');
-            }
-            const signer = await ethersProvider.getSigner(); 
-            const contract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, signer); 
-            const tx = await contract.startGame(0); 
-            await tx.wait(); 
-        }
+        const signer = await ethersProvider.getSigner(); 
+        const contract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, signer); 
+        const tx = await contract.startGame(fid || 0); 
+        await tx.wait();
+        */
 
+        // Start the game directly (no transaction needed for basic gameplay)
         document.getElementById('mainMenu').style.display = 'none';
         document.getElementById('profileHeader').style.display = 'none';
         document.getElementById('leaderboardBtn').style.display = 'none';
@@ -329,12 +320,11 @@ window.startGameFromMenu = async function() {
     } catch (error) {
         console.error('Failed to start game:', error);
         
-        const playBtn = document.getElementById('playBtn');
         playBtn.disabled = false;
         playBtn.textContent = 'Play Game';
         
         let errorMessage = '❌ Failed to start game. Please try again.';
-        if (error.message.includes('User rejected')) {
+        if (error.message.includes('User rejected') || error.message.includes('user rejected')) {
             errorMessage = '❌ Transaction rejected. Please try again.';
         }
         showSuccessMessage(errorMessage);
