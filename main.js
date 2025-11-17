@@ -198,18 +198,18 @@ function updateWalletUI(account) {
 
 async function checkPrizePoolStatus() {
     try {
-        let contractBalance;
-        if (isFarcasterEnvironment && window.walletConfig) { 
-            contractBalance = await readContract(window.walletConfig, { 
-                address: GAME_CONTRACT_ADDRESS, 
-                abi: GAME_CONTRACT_ABI, 
-                functionName: 'getContractBalance' 
-            }); 
+        // ✅ Use ethers.js only
+        if (!ethersProvider) {
+            const walletProvider = appKitModal.getWalletProvider();
+            if (walletProvider) {
+                ethersProvider = new ethers.BrowserProvider(walletProvider);
+            } else {
+                return; // Can't check without provider
+            }
         }
-        else if (ethersProvider) { 
-            const contract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, ethersProvider); 
-            contractBalance = await contract.getContractBalance(); 
-        }
+        
+        const contract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, ethersProvider);
+        const contractBalance = await contract.getContractBalance();
         
         const REWARD_AMOUNT = BigInt(8510638297872);
         const rewardsAvailable = contractBalance / REWARD_AMOUNT;
@@ -218,7 +218,7 @@ async function checkPrizePoolStatus() {
         if (statusDiv) {
             if (contractBalance < REWARD_AMOUNT) {
                 statusDiv.innerHTML = '😔 Prize pool empty, play for fun!';
-                statusDiv.style.color = '#10b981';
+                statusDiv.style.color = '#ef4444';
             } else if (rewardsAvailable < 10n) {
                 statusDiv.innerHTML = `⚡ Prize pool low - ${rewardsAvailable} rewards left!`;
                 statusDiv.style.color = '#EAB308';
@@ -229,11 +229,6 @@ async function checkPrizePoolStatus() {
         }
     } catch (error) {
         console.error('Failed to check prize pool:', error);
-        const statusDiv = document.getElementById('prizePoolStatus');
-        if (statusDiv) {
-            statusDiv.innerHTML = '💰 Prize pool status unknown';
-            statusDiv.style.color = 'rgba(255, 255, 255, 0.6)';
-        }
     }
 }
 
@@ -527,28 +522,29 @@ window.claimScoreReward = async function() {
         claimBtn.disabled = true;
         claimBtn.textContent = '⏳ Checking...';
         
-        let contractBalance, remainingClaims;
-        if (isFarcasterEnvironment) {
-            contractBalance = await readContract(window.walletConfig, { 
-                address: GAME_CONTRACT_ADDRESS, 
-                abi: GAME_CONTRACT_ABI, 
-                functionName: 'getContractBalance' 
-            });
-            remainingClaims = await readContract(window.walletConfig, { 
-                address: GAME_CONTRACT_ADDRESS, 
-                abi: GAME_CONTRACT_ABI, 
-                functionName: 'getRemainingClaimsForFID', 
-                args: [BigInt(farcasterFID)] 
-            });
-        } else {
-            if (!ethersProvider) {
-                const walletProvider = appKitModal.getWalletProvider();
-                if (walletProvider) ethersProvider = new ethers.BrowserProvider(walletProvider);
+        // ✅ FIX: Use ethersProvider instead of wagmi for contract calls
+        if (!ethersProvider) {
+            const walletProvider = appKitModal.getWalletProvider();
+            if (walletProvider) {
+                ethersProvider = new ethers.BrowserProvider(walletProvider);
+            } else {
+                throw new Error('No wallet provider available');
             }
-            const contract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, ethersProvider);
-            contractBalance = await contract.getContractBalance();
-            remainingClaims = await contract.getRemainingClaimsForFID(0);
         }
+        
+        // Check network
+        const network = await ethersProvider.getNetwork();
+        if (network.chainId !== 8453n) {
+            showSuccessMessage('⚠️ Please switch to Base network in your wallet!');
+            claimBtn.disabled = false;
+            claimBtn.textContent = '💰 Claim ETH Reward';
+            return;
+        }
+        
+        // Check contract balance and remaining claims
+        const contract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, ethersProvider);
+        const contractBalance = await contract.getContractBalance();
+        const remainingClaims = await contract.getRemainingClaimsForFID(farcasterFID || 0);
         
         const REWARD_AMOUNT = BigInt(8510638297872);
         
@@ -567,48 +563,72 @@ window.claimScoreReward = async function() {
         }
         
         const score = window.gameInstance ? Math.floor(window.gameInstance.score) : 0;
+        
+        if (score < 30) {
+            showSuccessMessage('❌ Score must be 30 or higher to claim!');
+            claimBtn.disabled = false;
+            claimBtn.textContent = '💰 Claim ETH Reward';
+            return;
+        }
+        
         const gameNonce = Date.now();
         const timestamp = Math.floor(Date.now() / 1000);
         
         claimBtn.textContent = '⏳ Claiming...';
         
+        // Create proof
         const farcasterProof = await createFarcasterProof(farcasterFID, window.currentAccount.address);
         
-        if (isFarcasterEnvironment) {
-            const hash = await writeContract(window.walletConfig, { 
-                address: GAME_CONTRACT_ADDRESS, 
-                abi: GAME_CONTRACT_ABI, 
-                functionName: 'claimReward', 
-                args: [BigInt(score), BigInt(gameNonce), BigInt(timestamp), BigInt(farcasterFID), farcasterProof] 
-            });
-            const receipt = await waitForTransactionReceipt(window.walletConfig, { hash });
-            if (receipt.status !== 'success') throw new Error('Transaction failed');
+        // ✅ FIX: Send transaction using ethers.js signer (not wagmi)
+        const signer = await ethersProvider.getSigner();
+        const contractWithSigner = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, signer);
+        
+        const tx = await contractWithSigner.claimReward(
+            score, 
+            gameNonce, 
+            timestamp, 
+            farcasterFID || 0, 
+            farcasterProof
+        );
+        
+        showSuccessMessage('⏳ Transaction sent! Waiting for confirmation...');
+        
+        const receipt = await tx.wait();
+        
+        if (receipt.status === 1) {
+            showSuccessMessage(`🎉 Successfully claimed reward! ETH sent to your wallet!`);
+            
+            // Update UI
+            document.getElementById('eligibleReward').style.display = 'none';
+            const successDiv = document.createElement('div');
+            successDiv.className = 'score-reward-info';
+            successDiv.innerHTML = `
+                <div style="font-size: 18px; font-weight: 700; margin-bottom: 10px;">✅ Reward Claimed!</div>
+                <div>Reward has been sent to your wallet!</div>
+                <div style="margin-top: 5px; font-size: 12px; color: rgba(255, 255, 255, 0.7);">
+                    Come back tomorrow for another claim!
+                </div>
+            `;
+            document.getElementById('scoreRewardSection').appendChild(successDiv);
         } else {
-            const signer = await ethersProvider.getSigner();
-            const contract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, signer);
-            const tx = await contract.claimReward(score, gameNonce, timestamp, 0, farcasterProof);
-            await tx.wait();
+            throw new Error('Transaction failed');
         }
         
-        showSuccessMessage(`🎉 Successfully claimed reward! ETH sent to your wallet!`);
-        
-        document.getElementById('eligibleReward').style.display = 'none';
-        const successDiv = document.createElement('div');
-        successDiv.className = 'score-reward-info';
-        successDiv.innerHTML = `<div style="font-size: 18px; font-weight: 700; margin-bottom: 10px;">✅ Reward Claimed!</div><div>Reward has been sent to your wallet!</div><div style="margin-top: 5px; font-size: 12px; color: rgba(255, 255, 255, 0.7);">Come back tomorrow for another claim!</div>`;
-        document.getElementById('scoreRewardSection').appendChild(successDiv);
     } catch (error) {
         console.error('Claim error:', error);
         
         let errorMessage = '❌ Failed to claim reward. ';
-        if (error.message && error.message.includes('User rejected')) {
+        
+        if (error.message && error.message.includes('user rejected')) {
             errorMessage = '⚠️ Transaction cancelled by user';
         } else if (error.message && error.message.includes('FIDAlreadyClaimedToday')) {
             errorMessage = '⏰ You already claimed your reward today! Come back tomorrow.';
         } else if (error.message && error.message.includes('ScoreTooLow')) {
-            errorMessage = '❌ Score must be 15 or higher to claim!';
+            errorMessage = '❌ Score must be 30 or higher to claim!';
         } else if (error.message && error.message.includes('InsufficientBalance')) {
             errorMessage = '😔 Prize pool is empty! Check back later!';
+        } else if (error.message && error.message.includes('insufficient funds')) {
+            errorMessage = '❌ Insufficient gas fees. Add ETH to your wallet.';
         } else {
             errorMessage += error.message || 'Please try again.';
         }
@@ -622,7 +642,6 @@ window.claimScoreReward = async function() {
         }
     }
 };
-
 window.showSuccessMessage = function(message) {
     const popup = document.createElement('div');
     popup.className = 'success-popup';
