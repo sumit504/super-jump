@@ -346,23 +346,16 @@ window.submitScoreOnChain = async function() {
     }
 
     try {
-        let playerStats;
-        if (isFarcasterEnvironment) { 
-            playerStats = await readContract(window.walletConfig, { 
-                address: GAME_CONTRACT_ADDRESS, 
-                abi: GAME_CONTRACT_ABI, 
-                functionName: 'getPlayerStats', 
-                args: [window.currentAccount.address] 
-            }); 
+        // Always use ethers for all contract calls
+        if (!ethersProvider) {
+            const walletProvider = appKitModal.getWalletProvider();
+            if (walletProvider) ethersProvider = new ethers.BrowserProvider(walletProvider);
+            else throw new Error('No wallet provider available');
         }
-        else { 
-            if (!ethersProvider) {
-                const walletProvider = appKitModal.getWalletProvider();
-                if (walletProvider) ethersProvider = new ethers.BrowserProvider(walletProvider);
-            }
-            const contract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, ethersProvider); 
-            playerStats = await contract.getPlayerStats(window.currentAccount.address); 
-        }
+        
+        // Read player stats
+        const contract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, ethersProvider); 
+        const playerStats = await contract.getPlayerStats(window.currentAccount.address);
         
         const previousBestScore = Number(playerStats[0]);
         
@@ -373,22 +366,11 @@ window.submitScoreOnChain = async function() {
         
         showSuccessMessage('📝 Submitting score to leaderboard...');
         
-        if (isFarcasterEnvironment) { 
-            const hash = await writeContract(window.walletConfig, { 
-                address: GAME_CONTRACT_ADDRESS, 
-                abi: GAME_CONTRACT_ABI, 
-                functionName: 'submitScore', 
-                args: [BigInt(score), BigInt(fid || 0)] 
-            }); 
-            const receipt = await waitForTransactionReceipt(window.walletConfig, { hash }); 
-            if (receipt.status !== 'success') throw new Error('Transaction failed'); 
-        }
-        else { 
-            const signer = await ethersProvider.getSigner(); 
-            const contract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, signer); 
-            const tx = await contract.submitScore(score, 0); 
-            await tx.wait(); 
-        }
+        // Submit score transaction
+        const signer = await ethersProvider.getSigner(); 
+        const contractWithSigner = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, signer); 
+        const tx = await contractWithSigner.submitScore(score, fid || 0); 
+        await tx.wait();
         
         if (previousBestScore === 0) {
             showSuccessMessage('🎉 First score submitted to leaderboard!');
@@ -405,7 +387,7 @@ window.submitScoreOnChain = async function() {
         console.error('Submit error:', error);
         let errorMessage = 'Failed to submit score. Please try again.';
         
-        if (error.message.includes('User rejected')) {
+        if (error.message.includes('User rejected') || error.message.includes('user rejected')) {
             errorMessage = '❌ Transaction rejected by user.';
         } else if (error.message.includes('ScoreNotBetter')) {
             errorMessage = '⚠️ Score not better than your previous best!';
