@@ -102,10 +102,12 @@ async function initializeFarcasterWallet() {
         await initializeReownWallet();
         
         // For Farcaster environment, use injected provider if available
-        window.walletConfig = createConfig({ 
-            chains: [wagmiBase], 
-            transports: { [wagmiBase.id]: http() }
-        });
+  window.walletConfig = createConfig({ 
+    chains: [wagmiBase], 
+    transports: { 
+        [wagmiBase.id]: http('https://base-mainnet.g.alchemy.com/v2/B1LejkLDDTELo2DAIk7nc') 
+    }
+});
         watchAccount(window.walletConfig, { onChange: (account) => updateWalletUI(account) });
         const account = getAccount(window.walletConfig);
         if (account.isConnected) { 
@@ -293,9 +295,7 @@ window.startGameFromMenu = async function() {
     playBtn.innerHTML = '🎮 Starting...';
 
     try {
-        // Optional: Call startGame on contract (can be commented out for testing)
-        // Uncomment this section if you want on-chain game tracking:
-        /*
+     
         const fid = window.getFarcasterFID();
         if (!ethersProvider) {
             const walletProvider = appKitModal.getWalletProvider();
@@ -305,7 +305,7 @@ window.startGameFromMenu = async function() {
         const contract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, signer); 
         const tx = await contract.startGame(fid || 0); 
         await tx.wait();
-        */
+        
 
         // Start the game directly (no transaction needed for basic gameplay)
         document.getElementById('mainMenu').style.display = 'none';
