@@ -346,51 +346,77 @@ window.submitScoreOnChain = async function() {
     }
 
     try {
-        // Always use ethers for all contract calls
+        // Get ethers provider
         if (!ethersProvider) {
             const walletProvider = appKitModal.getWalletProvider();
             if (walletProvider) ethersProvider = new ethers.BrowserProvider(walletProvider);
             else throw new Error('No wallet provider available');
         }
         
-        // Read player stats
-        const contract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, ethersProvider); 
-        const playerStats = await contract.getPlayerStats(window.currentAccount.address);
-        
-        const previousBestScore = Number(playerStats[0]);
-        
-        if (previousBestScore > 0 && score <= previousBestScore) {
-            showSuccessMessage(`⚠️ Not better than your best score (${previousBestScore}). Try again!`);
+        // Check if we're on Base network (Chain ID: 8453)
+        const network = await ethersProvider.getNetwork();
+        if (network.chainId !== 8453n) {
+            showSuccessMessage('⚠️ Please switch to Base network in your wallet!');
             return;
+        }
+        
+        showSuccessMessage('📝 Checking your previous scores...');
+        
+        // Try to get player stats (optional - if it fails, we'll still submit)
+        let previousBestScore = 0;
+        try {
+            const contract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, ethersProvider);
+            const stats = await contract.getPlayerStats(window.currentAccount.address);
+            previousBestScore = Number(stats[0]);
+            
+            // Check if new score is better
+            if (previousBestScore > 0 && score <= previousBestScore) {
+                showSuccessMessage(`⚠️ Not better than your best score (${previousBestScore}). Try again!`);
+                return;
+            }
+        } catch (statsError) {
+            console.log('Could not fetch stats, proceeding with submission:', statsError);
+            // Continue anyway - let the contract decide
         }
         
         showSuccessMessage('📝 Submitting score to leaderboard...');
         
         // Submit score transaction
         const signer = await ethersProvider.getSigner(); 
-        const contractWithSigner = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, signer); 
-        const tx = await contractWithSigner.submitScore(score, fid || 0); 
-        await tx.wait();
+        const contract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, signer); 
+        const tx = await contract.submitScore(score, fid || 0); 
+        const receipt = await tx.wait();
         
-        if (previousBestScore === 0) {
-            showSuccessMessage('🎉 First score submitted to leaderboard!');
+        if (receipt.status === 1) {
+            if (previousBestScore === 0) {
+                showSuccessMessage('🎉 First score submitted to leaderboard!');
+            } else {
+                showSuccessMessage(`🎉 New best score! Improved from ${previousBestScore}!`);
+            }
         } else {
-            showSuccessMessage(`🎉 New best score! Improved from ${previousBestScore}!`);
+            throw new Error('Transaction failed');
         }
         
+        // Refresh leaderboard if visible
         const leaderboardScreen = document.getElementById('leaderboardScreen');
         if (leaderboardScreen && leaderboardScreen.style.display !== 'none') {
-            await window.loadOnChainLeaderboard();
+            setTimeout(() => window.loadOnChainLeaderboard(), 2000);
         }
         
     } catch (error) {
         console.error('Submit error:', error);
-        let errorMessage = 'Failed to submit score. Please try again.';
+        let errorMessage = '❌ Failed to submit score.';
         
         if (error.message.includes('User rejected') || error.message.includes('user rejected')) {
             errorMessage = '❌ Transaction rejected by user.';
         } else if (error.message.includes('ScoreNotBetter')) {
             errorMessage = '⚠️ Score not better than your previous best!';
+        } else if (error.message.includes('insufficient funds')) {
+            errorMessage = '❌ Insufficient gas fees. Add ETH to your wallet.';
+        } else if (error.code === 'CALL_EXCEPTION' || error.message.includes('missing revert data')) {
+            errorMessage = '⚠️ Network error. Please ensure you\'re on Base network and try again.';
+        } else if (error.message.includes('InvalidScore')) {
+            errorMessage = '❌ Invalid score value.';
         }
         
         showSuccessMessage(errorMessage);
