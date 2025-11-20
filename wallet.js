@@ -1,30 +1,18 @@
-import { sdk } from '@farcaster/miniapp-sdk';
+// Simplified wallet integration without Farcaster SDK initially
 import { createAppKit } from '@reown/appkit';
 import { EthersAdapter } from '@reown/appkit-adapter-ethers';
 import { base } from '@reown/appkit/networks';
 import { ethers } from 'ethers';
-import {
-    createConfig,
-    connect,
-    writeContract,
-    readContract,
-    getAccount,
-    waitForTransactionReceipt,
-    watchAccount,
-    http
-} from '@wagmi/core';
-import { base as wagmiBase } from '@wagmi/core/chains';
-import { farcasterMiniApp } from '@farcaster/miniapp-wagmi-connector';
 
-let isFarcasterEnvironment = false, userProfile = null, farcasterFID = null, appKitModal = null, ethersProvider = null;
+let appKitModal = null;
+let ethersProvider = null;
 window.walletConfig = null; 
 window.isWalletConnected = false; 
 window.currentAccount = null;
 
 const GAME_CONTRACT_ADDRESS = "0x603b3b1a946b9ff14280e8581539e07808dc5d0d";
-const NEYNAR_API_KEY = '8BF81B8C-C491-4735-8E1C-FC491FF048D4';
 const REOWN_PROJECT_ID = 'e0dd881bad824ac3418617434a79f917';
-const BASE_CHAIN_ID = 8453; // Base mainnet chain ID
+const BASE_CHAIN_ID = 8453;
 
 const GAME_CONTRACT_ABI = [
     {"inputs": [{"type": "uint256", "name": "score"}, {"type": "uint256", "name": "gameNonce"}, {"type": "uint256", "name": "timestamp"}, {"type": "uint256", "name": "farcasterFID"}, {"type": "bytes", "name": "farcasterProof"}], "name": "claimReward", "outputs": [], "stateMutability": "nonpayable", "type": "function"},
@@ -36,19 +24,13 @@ const GAME_CONTRACT_ABI = [
     {"inputs": [], "name": "getContractBalance", "outputs": [{"type": "uint256", "name": ""}], "stateMutability": "view", "type": "function"}
 ];
 
-// Add network verification
+// Verify network
 async function verifyNetwork() {
     try {
-        if (isFarcasterEnvironment && window.walletConfig) {
-            const account = getAccount(window.walletConfig);
-            if (account.chainId !== BASE_CHAIN_ID) {
-                console.warn('Wrong network detected. Expected Base (8453), got:', account.chainId);
-                return false;
-            }
-        } else if (ethersProvider) {
+        if (ethersProvider) {
             const network = await ethersProvider.getNetwork();
             if (Number(network.chainId) !== BASE_CHAIN_ID) {
-                console.warn('Wrong network detected. Expected Base (8453), got:', network.chainId);
+                console.warn('Wrong network. Expected Base (8453), got:', network.chainId);
                 return false;
             }
         }
@@ -65,10 +47,10 @@ async function verifyContractExists() {
         if (ethersProvider) {
             const code = await ethersProvider.getCode(GAME_CONTRACT_ADDRESS);
             if (code === '0x' || code === '0x0') {
-                console.error('No contract found at address:', GAME_CONTRACT_ADDRESS);
+                console.error('No contract at:', GAME_CONTRACT_ADDRESS);
                 return false;
             }
-            console.log('✅ Contract verified at:', GAME_CONTRACT_ADDRESS);
+            console.log('✅ Contract verified');
             return true;
         }
         return true;
@@ -78,91 +60,7 @@ async function verifyContractExists() {
     }
 }
 
-async function detectEnvironment() {
-    try { 
-        const context = await sdk.context; 
-        if (context?.user?.fid) { 
-            isFarcasterEnvironment = true; 
-            console.log('✅ Farcaster'); 
-            return true; 
-        } 
-    } catch (error) {}
-    isFarcasterEnvironment = false; 
-    console.log('🌐 Standalone - Reown'); 
-    return false;
-}
-
-async function fetchFarcasterProfile() {
-    try {
-        const context = await sdk.context;
-        if (context?.user?.fid) {
-            farcasterFID = context.user.fid;
-            const response = await fetch(`https://api.neynar.com/v2/farcaster/user/bulk?fids=${farcasterFID}`, { 
-                method: 'GET', 
-                headers: { 
-                    'Accept': 'application/json', 
-                    'api_key': NEYNAR_API_KEY 
-                }
-            });
-            if (response.ok) { 
-                const data = await response.json(); 
-                if (data.users && data.users.length > 0) { 
-                    userProfile = data.users[0]; 
-                    updateProfileUI(); 
-                } 
-            }
-        } else { 
-            userProfile = { display_name: "Demo Player", username: "player", pfp_url: null }; 
-            farcasterFID = 0; 
-            updateProfileUI(); 
-        }
-    } catch (error) { 
-        userProfile = { display_name: "Demo Player", username: "player", pfp_url: null }; 
-        farcasterFID = 0; 
-        updateProfileUI(); 
-    }
-}
-
-function updateProfileUI() {
-    if (!userProfile) return;
-    const headerAvatar = document.getElementById('profileAvatar');
-    if (userProfile.pfp_url) { 
-        headerAvatar.innerHTML = `<img src="${userProfile.pfp_url}" alt="Avatar" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`; 
-    } else { 
-        headerAvatar.textContent = userProfile.display_name ? userProfile.display_name.charAt(0).toUpperCase() : '?'; 
-    }
-    const profileUsername = document.getElementById('profileUsername');
-    profileUsername.textContent = userProfile.display_name || 'Anonymous Player';
-    document.getElementById('profileHeader').style.display = 'flex';
-}
-
-async function initializeFarcasterWallet() {
-    try {
-        window.walletConfig = createConfig({ 
-            chains: [wagmiBase], 
-            connectors: [farcasterMiniApp()], 
-            transports: { [wagmiBase.id]: http() }
-        });
-        watchAccount(window.walletConfig, { 
-            onChange: (account) => updateWalletUI(account) 
-        });
-        const account = getAccount(window.walletConfig);
-        if (account.isConnected) { 
-            updateWalletUI(account); 
-        } else { 
-            try { 
-                await connect(window.walletConfig, { connector: farcasterMiniApp() }); 
-                updateWalletUI(getAccount(window.walletConfig)); 
-            } catch (error) { 
-                updateWalletUI(getAccount(window.walletConfig)); 
-            } 
-        }
-    } catch (error) { 
-        console.error('Failed to initialize Farcaster wallet:', error); 
-    }
-}
-
-async function initializeReownWallet() {
+async function initializeWallet() {
     try {
         const adapter = new EthersAdapter();
         appKitModal = createAppKit({ 
@@ -178,7 +76,7 @@ async function initializeReownWallet() {
             features: { analytics: false }
         });
 
-        const unsubscribe = appKitModal.subscribeState((state) => {
+        appKitModal.subscribeState((state) => {
             if (state.open === false && !state.loading) {
                 setTimeout(() => checkConnection(), 500);
             }
@@ -195,17 +93,15 @@ async function initializeReownWallet() {
                     if (address) {
                         console.log('✅ Wallet connected:', address);
                         
-                        // Verify network
                         const isCorrectNetwork = await verifyNetwork();
                         if (!isCorrectNetwork) {
                             showSuccessMessage('⚠️ Please switch to Base network');
                             return false;
                         }
                         
-                        // Verify contract
                         const contractExists = await verifyContractExists();
                         if (!contractExists) {
-                            showSuccessMessage('❌ Contract not found. Please check network.');
+                            showSuccessMessage('❌ Contract not found. Check network.');
                             return false;
                         }
                         
@@ -227,9 +123,9 @@ async function initializeReownWallet() {
         }
 
         setTimeout(() => checkConnection(), 1000);
-        console.log('✅ Reown initialized');
+        console.log('✅ Wallet initialized');
     } catch (error) { 
-        console.error('Failed to initialize Reown:', error); 
+        console.error('Failed to initialize wallet:', error); 
     }
 }
 
@@ -257,32 +153,25 @@ function updateWalletUI(account) {
 
 async function checkPrizePoolStatus() {
     try {
-        let contractBalance;
-        if (isFarcasterEnvironment && window.walletConfig) { 
-            contractBalance = await readContract(window.walletConfig, { 
-                address: GAME_CONTRACT_ADDRESS, 
-                abi: GAME_CONTRACT_ABI, 
-                functionName: 'getContractBalance' 
-            }); 
-        } else if (ethersProvider) { 
+        if (ethersProvider) { 
             const contract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, ethersProvider); 
-            contractBalance = await contract.getContractBalance(); 
-        }
-        
-        const REWARD_AMOUNT = BigInt(8510638297872);
-        const rewardsAvailable = contractBalance / REWARD_AMOUNT;
-        
-        const statusDiv = document.getElementById('prizePoolStatus');
-        if (statusDiv) {
-            if (contractBalance < REWARD_AMOUNT) {
-                statusDiv.innerHTML = '😔 Prize pool empty, play for fun!';
-                statusDiv.style.color = '#10b981';
-            } else if (rewardsAvailable < 10n) {
-                statusDiv.innerHTML = `⚡ Prize pool low - ${rewardsAvailable} rewards left!`;
-                statusDiv.style.color = '#EAB308';
-            } else {
-                statusDiv.innerHTML = `✅ Prize pool active - ${rewardsAvailable}+ rewards available!`;
-                statusDiv.style.color = '#10b981';
+            const contractBalance = await contract.getContractBalance(); 
+            
+            const REWARD_AMOUNT = BigInt(8510638297872);
+            const rewardsAvailable = contractBalance / REWARD_AMOUNT;
+            
+            const statusDiv = document.getElementById('prizePoolStatus');
+            if (statusDiv) {
+                if (contractBalance < REWARD_AMOUNT) {
+                    statusDiv.innerHTML = '😔 Prize pool empty, play for fun!';
+                    statusDiv.style.color = '#10b981';
+                } else if (rewardsAvailable < 10n) {
+                    statusDiv.innerHTML = `⚡ Prize pool low - ${rewardsAvailable} rewards left!`;
+                    statusDiv.style.color = '#EAB308';
+                } else {
+                    statusDiv.innerHTML = `✅ Prize pool active - ${rewardsAvailable}+ rewards available!`;
+                    statusDiv.style.color = '#10b981';
+                }
             }
         }
     } catch (error) {
@@ -295,54 +184,47 @@ async function checkPrizePoolStatus() {
     }
 }
 
-window.getFarcasterFID = () => farcasterFID;
+window.getFarcasterFID = () => 0; // Default to 0 for non-Farcaster users
 
 window.connectWallet = async function() {
     try {
-        console.log('Connect wallet clicked');
-        if (isFarcasterEnvironment) { 
-            await connect(window.walletConfig, { connector: farcasterMiniApp() }); 
-            updateWalletUI(getAccount(window.walletConfig)); 
-        } else { 
-            console.log('Opening Reown modal...');
-            await appKitModal.open();
+        console.log('Opening wallet modal...');
+        await appKitModal.open();
+        
+        const checkInterval = setInterval(async () => {
+            const state = appKitModal.getState();
             
-            const checkInterval = setInterval(async () => {
-                const state = appKitModal.getState();
+            if (state.open === false && !state.loading) {
+                clearInterval(checkInterval);
                 
-                if (state.open === false && !state.loading) {
-                    clearInterval(checkInterval);
-                    
-                    try {
-                        const walletProvider = appKitModal.getWalletProvider();
-                        if (walletProvider) {
-                            ethersProvider = new ethers.BrowserProvider(walletProvider);
-                            const signer = await ethersProvider.getSigner();
-                            const address = await signer.getAddress();
+                try {
+                    const walletProvider = appKitModal.getWalletProvider();
+                    if (walletProvider) {
+                        ethersProvider = new ethers.BrowserProvider(walletProvider);
+                        const signer = await ethersProvider.getSigner();
+                        const address = await signer.getAddress();
+                        
+                        if (address) {
+                            console.log('✅ Connected:', address);
                             
-                            if (address) {
-                                console.log('✅ Connected:', address);
-                                
-                                // Verify network after connection
-                                const isCorrectNetwork = await verifyNetwork();
-                                if (!isCorrectNetwork) {
-                                    showSuccessMessage('⚠️ Please switch to Base network in your wallet');
-                                    return;
-                                }
-                                
-                                window.currentAccount = { address: address, isConnected: true };
-                                window.isWalletConnected = true;
-                                updateWalletUI({ isConnected: true, address: address });
+                            const isCorrectNetwork = await verifyNetwork();
+                            if (!isCorrectNetwork) {
+                                showSuccessMessage('⚠️ Please switch to Base network in your wallet');
+                                return;
                             }
+                            
+                            window.currentAccount = { address: address, isConnected: true };
+                            window.isWalletConnected = true;
+                            updateWalletUI({ isConnected: true, address: address });
                         }
-                    } catch (error) {
-                        console.log('User closed modal without connecting');
                     }
+                } catch (error) {
+                    console.log('User closed modal without connecting');
                 }
-            }, 500);
-            
-            setTimeout(() => clearInterval(checkInterval), 10000);
-        }
+            }
+        }, 500);
+        
+        setTimeout(() => clearInterval(checkInterval), 10000);
     } catch (error) { 
         console.error('Connect wallet error:', error);
         showSuccessMessage('❌ Failed to connect wallet'); 
@@ -356,17 +238,15 @@ window.startGameFromMenu = async function() {
     }
 
     try {
-        // Verify network before starting
         const isCorrectNetwork = await verifyNetwork();
         if (!isCorrectNetwork) {
-            showSuccessMessage('⚠️ Wrong network! Please switch to Base network');
+            showSuccessMessage('⚠️ Wrong network! Switch to Base network');
             return;
         }
 
-        // Verify contract exists
         const contractExists = await verifyContractExists();
         if (!contractExists) {
-            showSuccessMessage('❌ Contract not found. Are you on Base network?');
+            showSuccessMessage('❌ Contract not found. Are you on Base?');
             return;
         }
 
@@ -374,43 +254,27 @@ window.startGameFromMenu = async function() {
         playBtn.disabled = true;
         playBtn.innerHTML = 'Starting... <div style="display: inline-block; border: 2px solid #fff; border-top: 2px solid transparent; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; margin-left: 10px;"></div>';
 
-        const fid = window.getFarcasterFID();
-        console.log('Starting game with FID:', fid);
-
-        if (isFarcasterEnvironment) { 
-            const hash = await writeContract(window.walletConfig, { 
-                address: GAME_CONTRACT_ADDRESS, 
-                abi: GAME_CONTRACT_ABI, 
-                functionName: 'startGame', 
-                args: [BigInt(fid || 0)] 
-            }); 
-            console.log('Transaction hash:', hash);
-            const receipt = await waitForTransactionReceipt(window.walletConfig, { hash }); 
-            if (receipt.status !== 'success') throw new Error('Transaction failed'); 
-        } else { 
-            if (!ethersProvider) {
-                const walletProvider = appKitModal.getWalletProvider();
-                if (walletProvider) ethersProvider = new ethers.BrowserProvider(walletProvider);
-                else throw new Error('No wallet provider available');
-            }
-            
-            const signer = await ethersProvider.getSigner(); 
-            const contract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, signer);
-            
-            // Estimate gas first to catch errors early
-            try {
-                const gasEstimate = await contract.startGame.estimateGas(0);
-                console.log('Gas estimate:', gasEstimate.toString());
-            } catch (gasError) {
-                console.error('Gas estimation failed:', gasError);
-                throw new Error('Contract call will fail. Check network and contract.');
-            }
-            
-            const tx = await contract.startGame(0); 
-            console.log('Transaction sent:', tx.hash);
-            await tx.wait();
-            console.log('Transaction confirmed');
+        if (!ethersProvider) {
+            const walletProvider = appKitModal.getWalletProvider();
+            if (walletProvider) ethersProvider = new ethers.BrowserProvider(walletProvider);
+            else throw new Error('No wallet provider');
         }
+        
+        const signer = await ethersProvider.getSigner(); 
+        const contract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, signer);
+        
+        try {
+            const gasEstimate = await contract.startGame.estimateGas(0);
+            console.log('Gas estimate:', gasEstimate.toString());
+        } catch (gasError) {
+            console.error('Gas estimation failed:', gasError);
+            throw new Error('Contract call will fail. Check network.');
+        }
+        
+        const tx = await contract.startGame(0); 
+        console.log('Transaction sent:', tx.hash);
+        await tx.wait();
+        console.log('Transaction confirmed');
 
         document.getElementById('mainMenu').style.display = 'none';
         document.getElementById('profileHeader').style.display = 'none';
@@ -431,15 +295,13 @@ window.startGameFromMenu = async function() {
         let errorMessage = '❌ Failed to start game. ';
         
         if (error.message.includes('User rejected') || error.message.includes('user rejected')) {
-            errorMessage = '❌ Transaction rejected. Please try again.';
+            errorMessage = '❌ Transaction rejected.';
         } else if (error.message.includes('insufficient funds')) {
             errorMessage = '❌ Insufficient funds for gas.';
-        } else if (error.message.includes('wrong network')) {
-            errorMessage = '❌ Wrong network. Switch to Base.';
         } else if (error.code === 'CALL_EXCEPTION') {
-            errorMessage = '❌ Contract error. Check: 1) You\'re on Base network 2) Contract is deployed 3) Try refreshing';
+            errorMessage = '❌ Contract error. Verify: 1) Base network 2) Contract deployed 3) Refresh page';
         } else {
-            errorMessage += error.message || 'Please try again.';
+            errorMessage += error.message || 'Try again.';
         }
         
         showSuccessMessage(errorMessage);
@@ -448,65 +310,43 @@ window.startGameFromMenu = async function() {
 
 window.submitScoreOnChain = async function() {
     if (!window.isWalletConnected || !window.currentAccount) { 
-        showSuccessMessage('🔗 Please connect your wallet first!'); 
+        showSuccessMessage('🔗 Connect wallet first!'); 
         return; 
     }
     
-    const fid = window.getFarcasterFID();
     const score = window.gameInstance ? Math.floor(window.gameInstance.score) : 0;
 
     if (score < 30) {
-        showSuccessMessage('❌ Score must be 30 or higher to submit!');
+        showSuccessMessage('❌ Score must be 30+ to submit!');
         return;
     }
 
     try {
-        let playerStats;
-        if (isFarcasterEnvironment) { 
-            playerStats = await readContract(window.walletConfig, { 
-                address: GAME_CONTRACT_ADDRESS, 
-                abi: GAME_CONTRACT_ABI, 
-                functionName: 'getPlayerStats', 
-                args: [window.currentAccount.address] 
-            }); 
-        } else { 
-            if (!ethersProvider) {
-                const walletProvider = appKitModal.getWalletProvider();
-                if (walletProvider) ethersProvider = new ethers.BrowserProvider(walletProvider);
-            }
-            const contract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, ethersProvider); 
-            playerStats = await contract.getPlayerStats(window.currentAccount.address); 
+        if (!ethersProvider) {
+            const walletProvider = appKitModal.getWalletProvider();
+            if (walletProvider) ethersProvider = new ethers.BrowserProvider(walletProvider);
         }
+        const contract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, ethersProvider); 
+        const playerStats = await contract.getPlayerStats(window.currentAccount.address); 
         
         const previousBestScore = Number(playerStats[0]);
         
         if (previousBestScore > 0 && score <= previousBestScore) {
-            showSuccessMessage(`⚠️ Not better than your best score (${previousBestScore}). Try again!`);
+            showSuccessMessage(`⚠️ Not better than best (${previousBestScore})`);
             return;
         }
         
-        showSuccessMessage('📝 Submitting score to leaderboard...');
+        showSuccessMessage('📝 Submitting score...');
         
-        if (isFarcasterEnvironment) { 
-            const hash = await writeContract(window.walletConfig, { 
-                address: GAME_CONTRACT_ADDRESS, 
-                abi: GAME_CONTRACT_ABI, 
-                functionName: 'submitScore', 
-                args: [BigInt(score), BigInt(fid || 0)] 
-            }); 
-            const receipt = await waitForTransactionReceipt(window.walletConfig, { hash }); 
-            if (receipt.status !== 'success') throw new Error('Transaction failed'); 
-        } else { 
-            const signer = await ethersProvider.getSigner(); 
-            const contract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, signer); 
-            const tx = await contract.submitScore(score, 0); 
-            await tx.wait(); 
-        }
+        const signer = await ethersProvider.getSigner(); 
+        const contractWithSigner = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, signer); 
+        const tx = await contractWithSigner.submitScore(score, 0); 
+        await tx.wait(); 
         
         if (previousBestScore === 0) {
-            showSuccessMessage('🎉 First score submitted to leaderboard!');
+            showSuccessMessage('🎉 First score submitted!');
         } else {
-            showSuccessMessage(`🎉 New best score! Improved from ${previousBestScore}!`);
+            showSuccessMessage(`🎉 New best! Improved from ${previousBestScore}!`);
         }
         
         const leaderboardScreen = document.getElementById('leaderboardScreen');
@@ -516,12 +356,12 @@ window.submitScoreOnChain = async function() {
         
     } catch (error) {
         console.error('Submit error:', error);
-        let errorMessage = 'Failed to submit score. Please try again.';
+        let errorMessage = 'Failed to submit.';
         
         if (error.message.includes('User rejected')) {
-            errorMessage = '❌ Transaction rejected by user.';
+            errorMessage = '❌ Transaction rejected.';
         } else if (error.message.includes('ScoreNotBetter')) {
-            errorMessage = '⚠️ Score not better than your previous best!';
+            errorMessage = '⚠️ Score not better!';
         }
         
         showSuccessMessage(errorMessage);
@@ -530,24 +370,13 @@ window.submitScoreOnChain = async function() {
 
 window.loadOnChainLeaderboard = async function() {
     try {
-        let topPlayers;
-        if (isFarcasterEnvironment && window.walletConfig) { 
-            topPlayers = await readContract(window.walletConfig, { 
-                address: GAME_CONTRACT_ADDRESS, 
-                abi: GAME_CONTRACT_ABI, 
-                functionName: 'getTopPlayers', 
-                args: [BigInt(50)] 
-            }); 
-        } else if (ethersProvider) { 
+        if (ethersProvider) { 
             const contract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, ethersProvider); 
-            topPlayers = await contract.getTopPlayers(50); 
-        } else { 
-            return; 
+            const topPlayers = await contract.getTopPlayers(50); 
+            displayOnChainLeaderboard(topPlayers);
         }
-        
-        displayOnChainLeaderboard(topPlayers);
     } catch (error) { 
-        document.getElementById('leaderboardList').innerHTML = `<div class="empty-leaderboard"><p>Failed to load leaderboard</p></div>`; 
+        document.getElementById('leaderboardList').innerHTML = `<div class="empty-leaderboard"><p>Failed to load</p></div>`; 
     }
 };
 
@@ -555,176 +384,20 @@ async function displayOnChainLeaderboard(players) {
     const listDiv = document.getElementById('leaderboardList');
     
     if (!players || players.length === 0) {
-        listDiv.innerHTML = `<div class="empty-leaderboard"><p style="font-size: 18px; margin-bottom: 5px;">No scores yet!</p><p style="font-size: 14px;">Be the first to submit a score.</p></div>`;
+        listDiv.innerHTML = `<div class="empty-leaderboard"><p>No scores yet!</p></div>`;
         return;
-    }
-
-    const fids = [...new Set(players.map(p => Number(p.farcasterFID)).filter(fid => fid > 0))];
-    let profiles = {};
-    
-    if (fids.length > 0) {
-        try {
-            const response = await fetch(`https://api.neynar.com/v2/farcaster/user/bulk?fids=${fids.join(',')}`, { 
-                method: 'GET', 
-                headers: { 
-                    'Accept': 'application/json', 
-                    'api_key': NEYNAR_API_KEY 
-                }
-            });
-            if (response.ok) { 
-                const data = await response.json(); 
-                data.users.forEach(user => { profiles[user.fid] = user; }); 
-            }
-        } catch (error) {}
     }
     
     listDiv.innerHTML = players.map((entry, idx) => {
         const rankClass = idx === 0 ? 'rank-1' : idx === 1 ? 'rank-2' : idx === 2 ? 'rank-3' : '';
         const rankIcon = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`;
         
-        const fid = Number(entry.farcasterFID);
-        const profile = profiles[fid];
+        const letter = entry.player.substring(2, 3).toUpperCase();
+        const avatarHtml = `<div style="width: 45px; height: 45px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px;">${letter}</div>`;
         
-        let avatarHtml, displayName;
-        
-        if (profile && profile.pfp_url) {
-            avatarHtml = `<img src="${profile.pfp_url}" style="width: 45px; height: 45px; border-radius: 50%;">`;
-            displayName = profile.display_name || profile.username || 'Player';
-        } else {
-            const letter = entry.player.substring(2, 3).toUpperCase();
-            avatarHtml = `<div style="width: 45px; height: 45px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px;">${letter}</div>`;
-            displayName = fid > 0 ? `FID ${fid}` : 'Anonymous';
-        }
-        
-        return `<div class="leaderboard-item ${rankClass}"><div style="display: flex; align-items: center; gap: 8px; flex: 1;"><div style="font-size: 20px; min-width: 45px; text-align: center;">${rankIcon}</div>${avatarHtml}<div style="flex: 1; min-width: 0;"><div style="font-weight: bold; color: white; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${displayName}</div><div style="font-size: 11px; color: rgba(255, 255, 255, 0.6); font-family: monospace;">${entry.player.substring(0, 6)}...${entry.player.substring(38)}</div></div></div><div style="display: flex; align-items: center; gap: 8px;"><div style="font-size: 16px; font-weight: bold; color: #FFD700;">🎯</div><div style="font-size: 16px; font-weight: bold; color: #FFD700;">${Number(entry.score)}</div></div></div>`;
+        return `<div class="leaderboard-item ${rankClass}"><div style="display: flex; align-items: center; gap: 8px; flex: 1;"><div style="font-size: 20px; min-width: 45px; text-align: center;">${rankIcon}</div>${avatarHtml}<div style="flex: 1;"><div style="font-weight: bold; color: white;">${entry.player.substring(0, 6)}...${entry.player.substring(38)}</div></div></div><div style="font-size: 16px; font-weight: bold; color: #FFD700;">🎯 ${Number(entry.score)}</div></div>`;
     }).join('');
 }
-
-async function createFarcasterProof(fid, walletAddress) {
-    const message = `${walletAddress}-${fid}-${Date.now()}`;
-    const encoder = new TextEncoder();
-    const data = encoder.encode(message);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    
-    const hashArray = new Uint8Array(hashBuffer);
-    const hashHex = '0x' + Array.from(hashArray).map(b => b.toString(16).padStart(2, '0')).join('');
-    
-    return hashHex;
-}
-
-window.claimScoreReward = async function() {
-    const farcasterFID = window.getFarcasterFID();
-    
-    if (!farcasterFID) {
-        showSuccessMessage('⚠️ Please open through Farcaster app to claim rewards');
-        return;
-    }
-    
-    if (!window.isWalletConnected) {
-        showSuccessMessage('❌ Please connect your wallet to claim rewards!');
-        return;
-    }
-    
-    try {
-        const claimBtn = document.getElementById('claimScoreBtn');
-        claimBtn.disabled = true;
-        claimBtn.textContent = '⏳ Checking...';
-        
-        let contractBalance, remainingClaims;
-        if (isFarcasterEnvironment) {
-            contractBalance = await readContract(window.walletConfig, { 
-                address: GAME_CONTRACT_ADDRESS, 
-                abi: GAME_CONTRACT_ABI, 
-                functionName: 'getContractBalance' 
-            });
-            remainingClaims = await readContract(window.walletConfig, { 
-                address: GAME_CONTRACT_ADDRESS, 
-                abi: GAME_CONTRACT_ABI, 
-                functionName: 'getRemainingClaimsForFID', 
-                args: [BigInt(farcasterFID)] 
-            });
-        } else {
-            if (!ethersProvider) {
-                const walletProvider = appKitModal.getWalletProvider();
-                if (walletProvider) ethersProvider = new ethers.BrowserProvider(walletProvider);
-            }
-            const contract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, ethersProvider);
-            contractBalance = await contract.getContractBalance();
-            remainingClaims = await contract.getRemainingClaimsForFID(0);
-        }
-        
-        const REWARD_AMOUNT = BigInt(8510638297872);
-        
-        if (contractBalance < REWARD_AMOUNT) {
-            showSuccessMessage('😔 Prize pool is empty! Check back later!');
-            claimBtn.disabled = false;
-            claimBtn.textContent = '💰 Claim ETH Reward';
-            return;
-        }
-        
-        if (remainingClaims === 0n) {
-            showSuccessMessage('⏰ You already claimed today! Come back tomorrow.');
-            claimBtn.disabled = false;
-            claimBtn.textContent = '💰 Claim ETH Reward';
-            return;
-        }
-        
-        const score = window.gameInstance ? Math.floor(window.gameInstance.score) : 0;
-        const gameNonce = Date.now();
-        const timestamp = Math.floor(Date.now() / 1000);
-        
-        claimBtn.textContent = '⏳ Claiming...';
-        
-        const farcasterProof = await createFarcasterProof(farcasterFID, window.currentAccount.address);
-        
-        if (isFarcasterEnvironment) {
-            const hash = await writeContract(window.walletConfig, { 
-                address: GAME_CONTRACT_ADDRESS, 
-                abi: GAME_CONTRACT_ABI, 
-                functionName: 'claimReward', 
-                args: [BigInt(score), BigInt(gameNonce), BigInt(timestamp), BigInt(farcasterFID), farcasterProof] 
-            });
-            const receipt = await waitForTransactionReceipt(window.walletConfig, { hash });
-            if (receipt.status !== 'success') throw new Error('Transaction failed');
-        } else {
-            const signer = await ethersProvider.getSigner();
-            const contract = new ethers.Contract(GAME_CONTRACT_ADDRESS, GAME_CONTRACT_ABI, signer);
-            const tx = await contract.claimReward(score, gameNonce, timestamp, 0, farcasterProof);
-            await tx.wait();
-        }
-        
-        showSuccessMessage(`🎉 Successfully claimed reward! ETH sent to your wallet!`);
-        
-        document.getElementById('eligibleReward').style.display = 'none';
-        const successDiv = document.createElement('div');
-        successDiv.className = 'score-reward-info';
-        successDiv.innerHTML = `<div style="font-size: 18px; font-weight: 700; margin-bottom: 10px;">✅ Reward Claimed!</div><div>Reward has been sent to your wallet!</div><div style="margin-top: 5px; font-size: 12px; color: rgba(255, 255, 255, 0.7);">Come back tomorrow for another claim!</div>`;
-        document.getElementById('scoreRewardSection').appendChild(successDiv);
-    } catch (error) {
-        console.error('Claim error:', error);
-        
-        let errorMessage = '❌ Failed to claim reward. ';
-        if (error.message && error.message.includes('User rejected')) {
-            errorMessage = '⚠️ Transaction cancelled by user';
-        } else if (error.message && error.message.includes('FIDAlreadyClaimedToday')) {
-            errorMessage = '⏰ You already claimed your reward today! Come back tomorrow.';
-        } else if (error.message && error.message.includes('ScoreTooLow')) {
-            errorMessage = '❌ Score must be 15 or higher to claim!';
-        } else if (error.message && error.message.includes('InsufficientBalance')) {
-            errorMessage = '😔 Prize pool is empty! Check back later!';
-        } else {
-            errorMessage += error.message || 'Please try again.';
-        }
-        
-        showSuccessMessage(errorMessage);
-    } finally {
-        const claimBtn = document.getElementById('claimScoreBtn');
-        if (claimBtn) {
-            claimBtn.disabled = false;
-            claimBtn.textContent = '💰 Claim ETH Reward';
-        }
-    }
-};
 
 window.showSuccessMessage = function(message) {
     const popup = document.createElement('div');
@@ -732,24 +405,8 @@ window.showSuccessMessage = function(message) {
     popup.textContent = message;
     document.body.appendChild(popup);
     
-    setTimeout(() => {
-        popup.remove();
-    }, 3000);
+    setTimeout(() => popup.remove(), 3000);
 };
 
 // Initialize
-(async () => { 
-    try { 
-        await detectEnvironment(); 
-        if (isFarcasterEnvironment) { 
-            if (sdk?.actions?.addMiniApp) await sdk.actions.addMiniApp(); 
-            sdk.actions.ready({ disableNativeGestures: true }); 
-            await fetchFarcasterProfile(); 
-            await initializeFarcasterWallet(); 
-        } else { 
-            await initializeReownWallet(); 
-        } 
-    } catch (err) {
-        console.error('Initialization error:', err);
-    } 
-})();
+initializeWallet();

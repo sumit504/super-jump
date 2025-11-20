@@ -230,6 +230,11 @@
             50% { opacity: 0.5; }
         }
 
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         .btn {
             background: linear-gradient(135deg, #4a90e2, #2563eb);
             color: white;
@@ -456,11 +461,6 @@
             margin: 20px auto;
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
         @media (max-width: 768px) {
             .leaderboard-content {
                 padding: 20px;
@@ -517,7 +517,7 @@
 
     <!-- Leaderboard Button -->
     <button class="leaderboard-btn" id="leaderboardBtn" onclick="toggleLeaderboard()" style="display: none;">
-         Leaderboard
+        🏆 Leaderboard
     </button>
 
     <!-- Game Over Screen -->
@@ -579,10 +579,10 @@
         </div>
     </div>
 
-    <!-- Wallet Integration Script -->
+    <!-- Import wallet integration as module -->
     <script type="module" src="./wallet.js"></script>
 
-    <!-- Game Script -->
+    <!-- Game script -->
     <script src="./game.js"></script>
 </body>
 </html>
